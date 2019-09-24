@@ -20,4 +20,22 @@ final class DecoderTest extends \PHPUnit\Framework\TestCase
             )
         );
     }
+
+    function testItCanBeCreatedFromStream()
+    {
+        $decoder = Cjm\Varint\Stream\Decoder::fromStream(fopen(__DIR__ . '/samples/stream', 'r'));
+
+        $strings = $decoder->strings();
+
+        $this->assertEquals(
+            [
+                0 => 3489,
+                1 => 1945,
+            ],
+            array_map(
+                'strlen',
+                iterator_to_array($strings)
+            )
+        );
+    }
 }

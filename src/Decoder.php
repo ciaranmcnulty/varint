@@ -5,19 +5,29 @@ namespace Cjm\Varint\Stream;
 
 final class Decoder
 {
-    private $path;
+    private $stream;
 
-    private function __construct(){}
+    private function __construct($stream)
+    {
+        $this->stream = $stream;
+    }
 
     /**
      * Create a decoder from a path, e.g. a file on disk
      */
     public static function fromPath(string $path) : self
     {
-        $decoder = new self();
-        $decoder->path = $path;
+        return new self(fopen($path, 'r'));
+    }
 
-        return $decoder;
+    /**
+     * Create a decoder from an already opened stream
+     *
+     * @param resource $stream
+     */
+    public static function fromStream($stream) : self
+    {
+        return new self($stream);
     }
 
     /**
@@ -25,14 +35,12 @@ final class Decoder
      */
     public function strings() : iterable
     {
-        $fh = fopen($this->path, 'r');
-
-        while (!feof($fh)) {
+        while (!feof($this->stream)) {
 
             $length = $index = 0;
 
             do {
-                $byte = ord(fread($fh, 1));
+                $byte = ord(fread($this->stream, 1));
 
                 // If MSB is 0 this is the last byte of varint
                 $more = (0b10000000 & $byte) > 0;
@@ -40,14 +48,14 @@ final class Decoder
                 // prepend the 7 LSB to what we have some far, in chunks of 7 digits
                 $length |= ((0b01111111 & $byte) << 7 * $index++);
 
-            } while (!feof($fh) && $more);
+            } while (!feof($this->stream) && $more);
 
             // streams can terminate with 0b00000000
             if (!$length) {
                 return;
             }
 
-            yield (fread($fh, $length));
+            yield (fread($this->stream, $length));
         }
     }
 }
